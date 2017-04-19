@@ -36,7 +36,7 @@ var Store = Ember.Service.extend({
 
   init() {
     this._super();
-
+    console.log("=> [start] init:ember api store.")
     if (!this.get('metaKeys') )
     {
       this.set('metaKeys', defaultMetaKeys.slice());
@@ -75,6 +75,7 @@ var Store = Ember.Service.extend({
     }
 
     this.reset();
+    console.log("=> [end] init:ember api store.")
   },
 
   // All the saved state goes in here
@@ -123,6 +124,8 @@ var Store = Ember.Service.extend({
   //  headers: Headers to send in the request (default: none).  Also includes ones specified in the model constructor.
   //  url: Use this specific URL instead of looking up the URL for the type/id.  This should only be used for bootstraping schemas on startup.
   find(type, id, opt) {
+    console.log("=> [start] find [" + type + "]," + id);
+
     type = normalizeType(type);
     opt = opt || {};
     opt.depaginate = opt.depaginate !== false;
@@ -141,6 +144,8 @@ var Store = Ember.Service.extend({
     var isCacheable = this.isCacheable(opt);
     opt.isForAll = !id && isCacheable;
 
+    console.log("=> [info] find [" + type + "] isCacheable=" + isCacheable + ",forceReload=" + opt.forceReload);
+    console.log("=> [info] find [" + type + "] isForAll=" +  opt.isForAll + ",foundAll=" + this._state.foundAll[type]);
     // See if we already have this resource, unless forceReload is on.
     if ( opt.forceReload !== true )
     {
@@ -162,6 +167,8 @@ var Store = Ember.Service.extend({
     // This is used for bootstraping to load the schema initially, and shouldn't be used for much else.
     if ( opt.url )
     {
+      console.log("=> [info] find [" + type + "] url=" + opt.url);
+
       return this._findWithUrl(opt.url, type, opt);
     }
     else
@@ -169,6 +176,7 @@ var Store = Ember.Service.extend({
       // Otherwise lookup the schema for the type and generate the URL based on it.
       return this.find('schema', type, {url: 'schemas/'+encodeURIComponent(type)}).then((schema) => {
         var url = schema.linkFor('collection') + (id ? '/'+encodeURIComponent(id) : '');
+        console.log("=> [info] find [" + type + "] schema url=" + url);
         return this._findWithUrl(url, type, opt);
       });
     }
@@ -177,18 +185,23 @@ var Store = Ember.Service.extend({
   // Returns a 'live' array of all records of [type] in the cache.
   all(type) {
     type = normalizeType(type);
+    console.log("=> [start] all [" + type + "]");
     var group = this._group(type);
+    console.log("=> [info] all [" + type + "] group=" + group);
     return this._createArrayProxy(group);
   },
 
   haveAll(type) {
     type = normalizeType(type);
+    console.log("=> [start] haveAll [" + type + "] foundAll=" + this._state.foundAll[type]);
     return this._state.foundAll[type];
   },
 
   // find(type) && return all(type)
   findAll(type, opt) {
     type = normalizeType(type);
+    console.log("=> [start] findAll [" + type + "]");
+
     opt = opt || {};
 
     if ( this.haveAll(type) && opt.forceReload !== true )
@@ -197,6 +210,7 @@ var Store = Ember.Service.extend({
     }
     else
     {
+      console.log("=> [info] findAll [" + type + "] not haveAll");
       return this.find(type, undefined, opt).then(() => {
         return this.all(type);
       });
@@ -262,11 +276,16 @@ var Store = Ember.Service.extend({
     opt.url = this.normalizeUrl(opt.url);
     opt.depaginate = opt.depaginate !== false;
 
+    console.log("=> [start] request [" + opt.url + "]");
+
     if ( this.mungeRequest ) {
       opt = this.mungeRequest(opt);
     }
 
+    console.log("=> [info] request [" + opt.url + "] munged="+ JSON.stringify(opt));
+
     return this.rawRequest(opt).then((xhr) => {
+      console.log("=> [info] request [" + opt.url + "] success");
       return this._requestSuccess(xhr,opt);
     }).catch((xhr) => {
       return this._requestFailed(xhr,opt);
@@ -324,15 +343,20 @@ var Store = Ember.Service.extend({
       [this.arrayProxyKey]: content
     };
 
+    console.log("=> [start] _createArrayProxy [" + this.arrayProxyKey + "] data="+ JSON.stringify(data));
+
     let opt = this.get('arrayProxyOptions')||{};
     Object.keys(opt).forEach((key) => {
       data[key] = opt[key];
     });
+    console.log("=> [end] _createArrayProxy [" + this.arrayProxyKey + "] returndata="+ JSON.stringify(this.arrayProxyClass.create(data)));
 
     return this.arrayProxyClass.create(data);
   },
 
   _headers(perRequest) {
+    console.log("=> [start] _headers [" + JSON.stringify(perRequest) + "]");
+
     let out = {
       'accept': 'application/json',
       'content-type': 'application/json',
@@ -340,25 +364,34 @@ var Store = Ember.Service.extend({
 
     applyHeaders(this.get('headers'), out);
     applyHeaders(perRequest, out);
+    console.log("=> [start] _headers [" + JSON.stringify(out) + "]");
     return out;
   },
 
   _findWithUrl(url, type, opt) {
     var queue = this._state.findQueue;
     var cls = getOwner(this).lookup('model:'+type);
+    console.log("=> [start] _findWithUrl [" + type + "] queue="+ JSON.stringify(queue) + ", claz=" + cls);
+
     url = urlOptions(url,opt,cls);
 
     // Collect Headers
     var newHeaders = {};
+
     if ( cls && cls.constructor.headers )
     {
+      console.log("=> [info] _findWithUrl [" + type + "] claz_headers="+ JSON.stringify(cls.constructor.headers));
       applyHeaders(cls.constructor.headers, newHeaders, true);
     }
+    console.log("=> [info] _findWithUrl [" + type + "] opt_headers="+ JSON.stringify(opt.headers));
     applyHeaders(opt.headers, newHeaders, true);
     // End: Collect headers
+    console.log("=> [info] _findWithUrl [" + type + "] new_headers="+ JSON.stringify(newHeaders));
 
     var later;
     var queueKey = JSON.stringify(newHeaders) + url;
+
+    console.log("=> [info] _findWithUrl [" + type + "] queueKey="+ JSON.stringify(queueKey));
 
     // check to see if the request is in the findQueue
     if (queue[queueKey]) {
@@ -367,16 +400,19 @@ var Store = Ember.Service.extend({
       let defer = Ember.RSVP.defer();
       filteredPromise.push(defer);
       later = defer.promise;
-
+      console.log("=> [info] _findWithUrl [" + type + "] inside queue[queueKey]");
     } else { // request is not in the findQueue
 
       opt.url = url;
       opt.headers = newHeaders;
 
+      console.log("=> [info] _findWithUrl [" + type + "] else queue[queueKey]");
+
       later = this.request(opt).then((result) => {
+        console.log("=> [info] _findWithUrl [" + type + "] request="+ JSON.stringify(result));
         if ( opt.isForAll ) {
           this._state.foundAll[type] = true;
-
+          console.log("=> [info] _findWithUrl [" + type + "] request.type="+ result.type);
           if ( opt.removeMissing && result.type === 'collection') {
             let all = this._group(type);
             let toRemove = [];
@@ -391,10 +427,11 @@ var Store = Ember.Service.extend({
             });
           }
         }
-
+        console.log("=> [info] _findWithUrl [" + type + "] request.resolve");
         this._finishFind(queueKey, result, 'resolve');
         return result;
       }, (reason) => {
+        console.log("=> [info] _findWithUrl [" + type + "] request.reject="+reason);
         this._finishFind(queueKey, reason, 'reject');
         return Ember.RSVP.reject(reason);
       });
@@ -410,10 +447,12 @@ var Store = Ember.Service.extend({
   _finishFind(key, result, action) {
     var queue = this._state.findQueue;
     var promises = queue[key];
+    console.log("=> [start] _finishFind [" + key + "] action="+ action +",queue=" + JSON.stringify(queue) + ",promises=" + JSON.stringify(promises));
 
     if (promises) {
       while (promises.length) {
         if (action === 'resolve') {
+          console.log("=> [info] _finishFind [" + key + "] resolving promise");
           promises.pop().resolve(result);
         } else if (action === 'reject') {
           promises.pop().reject(result);
@@ -430,10 +469,13 @@ var Store = Ember.Service.extend({
       return;
     }
 
+    console.log("=> [start] _requestSuccess [" + xhr + "]");
     if ( xhr.body && typeof xhr.body === 'object' )
     {
       Ember.beginPropertyChanges();
+
       let response = this._typeify(xhr.body);
+      console.log("=> [info] _requestSuccess typeifyed [" + response + "]");
       delete xhr.body;
       Object.defineProperty(response, 'xhr', {value: xhr, configurable: true});
       Ember.endPropertyChanges();
@@ -442,6 +484,7 @@ var Store = Ember.Service.extend({
       if ( opt.include && opt.include.length && response.forEach )
       {
         response.forEach((obj) => {
+          console.log("=> [info] _requestSuccess obj [" +obj + "]");
           obj.includedKeys = obj.includedKeys || [];
           obj.includedKeys.pushObjects(opt.include.slice());
           obj.includedKeys = obj.includedKeys.uniq();
@@ -459,11 +502,13 @@ var Store = Ember.Service.extend({
       }
       else
       {
+        console.log("=> [end] _requestSuccess object [" + response + "]");
         return response;
       }
     }
     else
     {
+      console.log("=> [end] _requestSuccess not object [" + xhr.body + "]");
       return xhr.body;
     }
   },
@@ -519,12 +564,14 @@ var Store = Ember.Service.extend({
     type = normalizeType(type);
     var cache = this._state.cache;
     var group = cache[type];
+    console.log("=> [start] _group [" + type + "] cache="+ cache + ",group="+ group);
+
     if ( !group )
     {
       group = [];
       cache[type] = group;
     }
-
+    console.log("=> [end] _group [" + type + "] cache="+ cache + ",group="+ group);
     return group;
   },
 
@@ -547,6 +594,9 @@ var Store = Ember.Service.extend({
     type = normalizeType(type);
     var group = this._group(type);
     var groupMap = this._groupMap(type);
+
+    console.log("=> [start] _add [" + type + "]");
+
     group.pushObject(obj);
     groupMap[obj.id] = obj;
 
@@ -554,6 +604,7 @@ var Store = Ember.Service.extend({
     {
       obj.wasAdded();
     }
+    console.log("=> [end] _add [" + type + "]");
   },
 
   // Add a lot of instances of the same type quickly.
@@ -594,6 +645,7 @@ var Store = Ember.Service.extend({
     type = normalizeType(type);
     var group = this._group(type);
     var groupMap = this._groupMap(type);
+    console.log("=> [start] _remove [" + type + "]");
     group.removeObject(obj);
     delete groupMap[obj.id];
 
@@ -601,6 +653,7 @@ var Store = Ember.Service.extend({
     {
       obj.wasRemoved();
     }
+    console.log("=> [end] _remove [" + type + "]");
   },
 
   // Turn a POJO into a Model: {updateStore: true}
@@ -608,6 +661,7 @@ var Store = Ember.Service.extend({
     if ( !input || typeof input !== 'object')
     {
       // Simple values can just be returned
+      console.log("=> [start] _typeify [input=" + input + "] is a simple value");
       return input;
     }
 
@@ -616,34 +670,48 @@ var Store = Ember.Service.extend({
     }
 
     let type = Ember.get(input,'type');
+
+    console.log("=> [info] _typeify [ember.get.type=" + type + "] input="+input);
+
     if ( Ember.isArray(input) )
     {
       // Recurse over arrays
+      console.log("=> [info] _typeify input is an array, recurse typeify.");
       return input.map(x => this._typeify(x, opt));
     }
     else if ( !type )
     {
       // If it doesn't have a type then there's no sub-fields to typeify
+      console.log("=> [info] _typeify must have a type.");
       return input;
     }
 
     type = normalizeType(type);
+
+    console.log("=> [info] _typeify [type=" + type + "]");
+
     if ( type === 'collection')
     {
+      console.log("=> [info] _typeify [type=" + type + "] is collection");
       return this.createCollection(input, opt);
     }
     else if ( !type )
     {
+      console.log("=> [info] _typeify [type=" + type + "] is not collection");
       return input;
     }
 
     let rec = this.createRecord(input, opt);
+
+    console.log("=> [info] _typeify [type=" + type + "] rec="+ rec);
+
     if ( !input.id || opt.updateStore === false ) {
       return rec;
     }
 
     // This must be after createRecord so that mangleIn() can change the baseType
     let baseType = rec.get('baseType');
+    console.log("=> [info] _typeify [type=" + type + "] baseType="+ baseType);
     if ( baseType ) {
       baseType = normalizeType(baseType);
 
@@ -655,15 +723,23 @@ var Store = Ember.Service.extend({
 
 
     let out = rec;
+
+    console.log("=> [info] _typeify [type=" + type + "] id="+ rec.id);
     let cacheEntry = this.getById(type, rec.id);
+
+    console.log("=> [info] _typeify [type=" + type + "] cacheEntry="+ cacheEntry);
+
     let baseCacheEntry;
     if ( baseType ) {
       baseCacheEntry = this.getById(baseType, rec.id);
     }
 
+    console.log("=> [info] _typeify [type=" + type + "] baseCacheEntry="+ baseCacheEntry);
+
     if ( cacheEntry )
     {
       cacheEntry.replaceWith(rec);
+      console.log("=> [info] _typeify [type=" + type + "] replaced cacheEntry="+ rec);
       out = cacheEntry;
     }
     else
@@ -675,13 +751,16 @@ var Store = Ember.Service.extend({
     }
 
     if ( type && !this.neverMissing.includes(type) ) {
+      console.log("=> [info] _typeify [type=" + type + "] neverMissing_for_type="+ rec.id);
       Ember.run.next(this,'_notifyMissing', type, rec.id);
 
       if ( baseType && !this.neverMissing.includes(type) ) {
+        console.log("=> [info] _typeify [type=" + type + "] baseType="+ baseType +",neverMissing_for_basetype="+ rec.id);
         Ember.run.next(this,'_notifyMissing', baseType, rec.id);
       }
     }
 
+    console.log("=> [end] _typeify [" +type +"]" + JSON.stringify(out));
     return out;
   },
 
@@ -690,11 +769,14 @@ var Store = Ember.Service.extend({
     Ember.beginPropertyChanges();
     let key = (opt && opt.key ? opt.key : 'data');
     var cls = getOwner(this).lookup('model:collection');
+    console.log("=> [start] createCollection [" +key +"] claz=" + cls);
+
     var content = input[key].map(x => this._typeify(x, opt));
     var output = cls.constructor.create({ content: content });
+    console.log("=> [info] createCollection [" +key +"] created content field in cls=" +cls + " constructor");
 
     Object.defineProperty(output, 'store', { value: this, configurable: true });
-
+    console.log("=> [info] createCollection [" +key +"] input=" +input + ",metaKeys=" + Ember.getProperties(input, this.get('metaKeys')));
     output.setProperties(Ember.getProperties(input, this.get('metaKeys')));
     Ember.endPropertyChanges();
     return output;
@@ -702,6 +784,7 @@ var Store = Ember.Service.extend({
 
   getClassFor(type) {
     let cls = this._state.classCache[type];
+    console.log("=> [start] getClassFor [" +type +"] cls=" +cls);
     if ( cls ) {
       return cls;
     }
@@ -709,13 +792,16 @@ var Store = Ember.Service.extend({
     let owner = getOwner(this);
     if ( type ) {
       cls = owner.lookup('model:'+type);
+      console.log("=> [info] getClassFor [" +type +"] type cls=" +cls);
     }
 
     if ( !cls ) {
       cls = owner.lookup('model:resource');
+      console.log("=> [info] getClassFor [" +type +"] not type cls=" +cls);
     }
 
     this._state.classCache[type] = cls;
+    console.log("=> [end] getClassFor [" +type +"] cls=" +cls);
     return cls;
   },
 
@@ -723,14 +809,20 @@ var Store = Ember.Service.extend({
   createRecord(data, opt) {
     opt = opt || {};
     let type = normalizeType(Ember.get(opt,'type')||Ember.get(data,'type')||'');
+    console.log("=> [start] createRecord [" +type +"]");
 
     let cls;
     if ( type ) {
       cls = this.getClassFor(type);
     }
 
+    console.log("=> [info] createRecord [" +type +"] cls=" + cls);
+
     let schema = this.getById('schema',type);
     let input = data;
+
+    console.log("=> [info] createRecord [" +type +"] schema=" + schema +",input=" + JSON.stringify(input));
+
     if ( opt.applyDefaults !== false && schema ) {
       input = schema.getCreateDefaults(data);
     }
@@ -743,8 +835,11 @@ var Store = Ember.Service.extend({
     }
 
     let cons = cls.constructor;
+    console.log("=> [info] createRecord [" +type +"] cons=" + cons);
+
     if ( cons.mangleIn && typeof cons.mangleIn === 'function' )
     {
+      console.log("=> [info] createRecord [" +type +"] mangleIn="+cons.mangleIn);
       input = cons.mangleIn(input,this);
     }
 
@@ -759,8 +854,9 @@ var Store = Ember.Service.extend({
     }
 
     var output = cons.create(input);
-
     Object.defineProperty(output, 'store', { value: this, configurable: true});
+    console.log("=> [end] createRecord [" +type +"] output="+ output);
+
     return output;
   },
 
@@ -775,7 +871,7 @@ var Store = Ember.Service.extend({
       group = {};
       cache[type] = group;
     }
-
+    console.log("=> [end] _missingMap [" +type +"]");
     return group;
   },
 
@@ -788,17 +884,17 @@ var Store = Ember.Service.extend({
       missingMap[id] = entries;
     }
 
-    //console.log('Missing', type, id, 'for', key, 'in', dependent);
+    console.log('=> [end] Missing [', type, "]", id, 'for', key, 'in', dependent);
     entries.push({o: dependent, k: key});
   },
 
   _notifyMissing(type,id) {
     let missingMap = this._missingMap(type);
     let entries = missingMap[id];
-    //console.log('Notify missing',type,id, entries);
+    console.log('=> [start] Notify missing [' + type + ']' +  id +  entries);
     if ( entries ) {
       entries.forEach((entry) => {
-        //console.log('Recomputing', entry.k, 'for', type, id, 'in', entry.o);
+        console.log('=> [end] Recomputing [', type, ']',entry.k, 'for', type, id, 'in', entry.o);
         entry.o.notifyPropertyChange(entry.k);
       });
 
