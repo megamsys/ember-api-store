@@ -413,6 +413,8 @@ var Store = Ember.Service.extend({
         if ( opt.isForAll ) {
           this._state.foundAll[type] = true;
           console.log("=> [info] _findWithUrl [" + type + "] request.type="+ result.type);
+          console.log("=> [info] _findWithUrl [" + type + "] request.Kind="+ result.Kind);
+          console.log("=> [info] _findWithUrl [" + type + "] request.Kind is List="+ result.Kind.endsWith("List"));
           if ( opt.removeMissing && result.type === 'collection') {
             let all = this._group(type);
             let toRemove = [];
