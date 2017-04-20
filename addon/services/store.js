@@ -173,7 +173,6 @@ var Store = Ember.Service.extend({
         var url = schema.linkFor('collection') + (id
           ? '/' + encodeURIComponent(id)
           : '');
-        console.log("=> [info] find [" + type + "] schema url=" + url);
         return this._findWithUrl(url, type, opt);
       });
     }
@@ -666,8 +665,8 @@ var Store = Ember.Service.extend({
     }
 
     let rec = this.createRecord(input, opt);
-
-    console.log("=> [info] _typeify [type=" + type + "] rec=" + rec);
+    console.log("=> [info] _typeify [type=" + type + "] input=" + JSON.stringify(input));
+    console.log("=> [info] _typeify [type=" + type + "] rec=" + JSON.stringify(rec));
 
     if (!input.id || opt.updateStore === false) {
       return rec;
@@ -741,7 +740,7 @@ var Store = Ember.Service.extend({
      var content = input[key].map(x => {
        x.kind = choppedKind;
        x.type = choppedKind;
-
+       x.id = x.metadata.uid;
        console.log("=> [info] createCollection [" + x.kind +"] x.type=" + x.type);
        this._typeify(x, opt);
      });
