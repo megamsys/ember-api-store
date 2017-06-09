@@ -125,7 +125,6 @@ var Store = Ember.Service.extend({
   //  headers: Headers to send in the request (default: none).  Also includes ones specified in the model constructor.
   //  url: Use this specific URL instead of looking up the URL for the type/id.  This should only be used for bootstraping schemas on startup.
   find(type, id, opt) {
-
     type = normalizeType(type);
     opt = opt || {};
     opt.depaginate = opt.depaginate !== false;
@@ -143,13 +142,18 @@ var Store = Ember.Service.extend({
     opt.isForAll = !id && isCacheable;
 
     // See if we already have this resource, unless forceReload is on.
-    if (opt.forceReload !== true) {
-      if (opt.isForAll && this._state.foundAll[type]) {
-        return Ember.RSVP.resolve(this.all(type), 'Cached find all ' + type);
-      } else if (isCacheable && id) {
-        var existing = this.getById(type, id);
-        if (existing) {
-          return Ember.RSVP.resolve(existing, 'Cached find ' + type + ':' + id);
+    if ( opt.forceReload !== true )
+    {
+      if ( opt.isForAll && this._state.foundAll[type] )
+      {
+        return Ember.RSVP.resolve(this.all(type),'Cached find all '+type);
+      }
+      else if ( isCacheable && id )
+      {
+        var existing = this.getById(type,id);
+        if ( existing )
+        {
+          return Ember.RSVP.resolve(existing,'Cached find '+type+':'+id);
         }
       }
     }
@@ -331,14 +335,15 @@ var Store = Ember.Service.extend({
     var queue = this._state.findQueue;
     var cls = getOwner(this).lookup('model:' + type);
 
+
     url = urlOptions(url, opt, cls);
 
     // Collect Headers
     var newHeaders = {};
 
-    if (cls && cls.constructor.headers) {
-      applyHeaders(cls.constructor.headers, newHeaders, true);
-    }
+    // if (cls && cls.constructor.headers) {
+    //   applyHeaders(cls.constructor.headers, newHeaders, true);
+    // }
     applyHeaders(opt.headers, newHeaders, true);
     // End: Collect headers
 
@@ -409,7 +414,6 @@ var Store = Ember.Service.extend({
   },
 
   _requestSuccess(xhr, opt) {
-
     if (xhr.status === 204) {
       return;
     }
@@ -417,7 +421,6 @@ var Store = Ember.Service.extend({
     if (xhr.body && typeof xhr.body === 'object') {
       Ember.beginPropertyChanges();
       let response = this._typeify(xhr.body);
-
       delete xhr.body;
       Object.defineProperty(response, 'xhr', {
         value: xhr,
@@ -596,7 +599,6 @@ var Store = Ember.Service.extend({
 
     let type = Ember.get(input, 'kind');
 
-
     if (Ember.isArray(input)) {
       // Recurse over arrays
       return input.map(x => this._typeify(x, opt));
@@ -715,7 +717,13 @@ var Store = Ember.Service.extend({
 
   // Create a record: {applyDefaults: false}
   createRecord(data, opt) {
+    if(!Ember.get(data, 'type'))
+    {
+      data = {
+        type: Ember.get(data, 'kind')
+      };
 
+    }
     opt = opt || {};
     let type = normalizeType(Ember.get(opt, 'type') || Ember.get(data, 'type') || '');
 

@@ -16,7 +16,7 @@ export function urlOptions(url,opt,cls) {
       }
 
       vals.forEach(function(val) {
-        url += (url.indexOf('?') >= 0 ? '&' : '?') + encodeURIComponent(key) + '=' + encodeURIComponent(val);
+        url += (url.indexOf('?') >= 0 ? '&' : '?') + 'labelSelector=' + encodeURIComponent(key) + '=' + encodeURIComponent(val);
       });
     });
   }
@@ -48,40 +48,40 @@ export function urlOptions(url,opt,cls) {
 
 
   // Limit
-  let limit = opt.limit;
-  if ( !limit && cls ) {
-    limit = cls.constructor.defaultLimit;
-  }
-
-  if ( limit )
-  {
-    url += (url.indexOf('?') >= 0 ? '&' : '?') + 'limit=' + limit;
-  }
+  // let limit = opt.limit;
+  // if ( !limit && cls ) {
+  //   limit = cls.constructor.defaultLimit;
+  // }
+  //
+  // if ( limit )
+  // {
+  //   url += (url.indexOf('?') >= 0 ? '&' : '?') + 'limit=' + limit;
+  // }
   // End: Limit
 
 
   // Sort
-  var sortBy = opt.sortBy;
-  if ( !sortBy && cls )
-  {
-    sortBy = cls.constructor.defaultSortBy;
-  }
-
-  if ( sortBy )
-  {
-    url += (url.indexOf('?') >= 0 ? '&' : '?') + 'sort=' + encodeURIComponent(sortBy);
-  }
-
-  var orderBy = opt.sortOrder;
-  if ( !orderBy && cls )
-  {
-    orderBy = cls.constructor.defaultSortOrder;
-  }
-
-  if ( orderBy )
-  {
-    url += (url.indexOf('?') >= 0 ? '&' : '?') + 'order=' + encodeURIComponent(orderBy);
-  }
+  // var sortBy = opt.sortBy;
+  // if ( !sortBy && cls )
+  // {
+  //   sortBy = cls.constructor.defaultSortBy;
+  // }
+  //
+  // if ( sortBy )
+  // {
+  //   url += (url.indexOf('?') >= 0 ? '&' : '?') + 'sort=' + encodeURIComponent(sortBy);
+  // }
+  //
+  // var orderBy = opt.sortOrder;
+  // if ( !orderBy && cls )
+  // {
+  //   orderBy = cls.constructor.defaultSortOrder;
+  // }
+  //
+  // if ( orderBy )
+  // {
+  //   url += (url.indexOf('?') >= 0 ? '&' : '?') + 'order=' + encodeURIComponent(orderBy);
+  // }
   // End: Sort
 
   return url;
